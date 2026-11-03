@@ -1,4 +1,4 @@
-# Smart Attendance and Student Progress Monitoring System
+# APP_project — Smart Attendance and Student Progress Monitoring System
 
 A Flask application for managing student records, recording attendance and
 marks, and exploring attendance and academic trends. It stores data in SQLite,
