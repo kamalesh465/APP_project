@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Advanced analytics (PySpark)</h3>
+<p class="text-muted">Exports attendance to CSV, loads it into Spark and runs groupBy, Spark SQL and window-function jobs.
+  The first run takes a few seconds while Spark starts.</p>
+<form method="post"><button class="btn btn-warning">Run Spark analysis</button></form>
+
+{% if result %}
+<p class="mt-3">Processed <strong>{{ result.total_rows }}</strong> records. Students below threshold: <strong>{{ result.at_risk_count }}</strong>.</p>
+<div class="row">
+  <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>Department-wise attendance (groupBy)</h5>
+    <table class="table table-sm"><tr><th>Department</th><th>%</th><th>Records</th></tr>
+    {% for r in result.department %}<tr><td>{{ r.department }}</td><td>{{ r.percentage }}</td><td>{{ r.records }}</td></tr>{% endfor %}</table>
+  </div></div></div>
+  <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>Subjects, worst first (Spark SQL)</h5>
+    <table class="table table-sm"><tr><th>Rank</th><th>Subject</th><th>%</th></tr>
+    {% for r in result.subjects %}<tr><td>{{ r.worst_rank }}</td><td>{{ r.subject }}</td><td>{{ r.percentage }}</td></tr>{% endfor %}</table>
+  </div></div></div>
+  <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>Lowest rolling 4-week attendance (window)</h5>
+    <table class="table table-sm"><tr><th>Student</th><th>Rolling %</th></tr>
+    {% for r in result.rolling %}<tr><td>{{ r.name }}</td><td>{{ r.rolling_pct }}</td></tr>{% endfor %}</table>
+  </div></div></div>
+  <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>Longest consecutive-absence streaks (window)</h5>
+    <table class="table table-sm"><tr><th>Student</th><th>Classes in a row</th></tr>
+    {% for r in result.streaks %}<tr><td>{{ r.name }}</td><td>{{ r.longest_absence_streak }}</td></tr>{% endfor %}</table>
+  </div></div></div>
+</div>
+{% endif %}
+{% endblock %}

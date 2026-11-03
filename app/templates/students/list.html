@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h3>Students</h3>
+  <a class="btn btn-primary" href="{{ url_for('students.add') }}">+ Add student</a>
+</div>
+<form class="mb-3" method="get">
+  <input class="form-control" name="q" value="{{ q }}" placeholder="Search by name or roll no">
+</form>
+<table class="table table-striped bg-white">
+  <thead class="table-dark"><tr><th>Roll No</th><th>Name</th><th>Department</th><th>Sem</th><th></th></tr></thead>
+  <tbody>
+  {% for s in students %}
+    <tr>
+      <td>{{ s.roll_no }}</td>
+      <td><a href="{{ url_for('students.detail', sid=s.id) }}">{{ s.name }}</a></td>
+      <td>{{ s.department }}</td><td>{{ s.semester }}</td>
+      <td class="text-end">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('students.edit', sid=s.id) }}">Edit</a>
+        <form class="d-inline" method="post" action="{{ url_for('students.delete', sid=s.id) }}"
+              onsubmit="return confirm('Delete this student and all their records?')">
+          <button class="btn btn-sm btn-outline-danger">Delete</button></form>
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="5" class="text-center text-muted">No students found.</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

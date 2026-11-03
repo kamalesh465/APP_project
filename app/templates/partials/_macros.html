@@ -1,0 +1,55 @@
+{% macro stat_card(title, value, color="primary") %}
+<div class="col-md-3 col-6 mb-3">
+  <div class="card border-{{ color }} h-100 shadow-sm">
+    <div class="card-body text-center">
+      <div class="text-muted small">{{ title }}</div>
+      <div class="fs-3 fw-bold text-{{ color }}">{{ value }}</div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro status_badge(status) %}
+<span class="badge bg-{{ 'danger' if status == 'At Risk' else 'success' }}">{{ status }}</span>
+{% endmacro %}
+
+{% macro pct_cell(value) %}
+<span class="{{ 'text-danger fw-bold' if value < config.ATTENDANCE_THRESHOLD else 'text-success' }}">{{ value }}%</span>
+{% endmacro %}
+
+{% macro student_table(rows) %}
+<table class="table table-hover bg-white align-middle">
+  <thead class="table-dark">
+    <tr><th>Roll No</th><th>Name</th><th>Dept</th><th>Attended / Total</th>
+        <th>Attendance</th><th>Status</th><th>Classes needed</th></tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr class="{{ 'table-danger' if r.status == 'At Risk' }}">
+      <td>{{ r.roll_no }}</td>
+      <td><a href="{{ url_for('students.detail', sid=r.student_id) }}">{{ r.name }}</a></td>
+      <td>{{ r.department }}</td>
+      <td>{{ r.attended }} / {{ r.total }}</td>
+      <td>{{ pct_cell(r.percentage) }}</td>
+      <td>{{ status_badge(r.status) }}</td>
+      <td>{{ r.classes_needed if r.classes_needed else '-' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="text-center text-muted">No data available.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{% macro line_chart(canvas_id, labels, values, label) %}
+<canvas id="{{ canvas_id }}" height="110"></canvas>
+<script>
+new Chart(document.getElementById("{{ canvas_id }}"), {
+  type: "line",
+  data: { labels: {{ labels|tojson }},
+          datasets: [{ label: "{{ label }}", data: {{ values|tojson }},
+                       borderColor: "#0d6efd", tension: 0.3, fill: false }] },
+  options: { scales: { y: { min: 0, max: 100 } } }
+});
+</script>
+{% endmacro %}

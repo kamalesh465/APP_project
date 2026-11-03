@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3"><h3>Marks</h3>
+  <a class="btn btn-primary" href="{{ url_for('marks.add') }}">+ Add mark</a></div>
+<table class="table table-striped bg-white">
+  <thead class="table-dark"><tr><th>Roll No</th><th>Student</th><th>Subject</th><th>Exam</th><th>Score</th></tr></thead>
+  {% for m in marks %}<tr><td>{{ m.student.roll_no }}</td><td>{{ m.student.name }}</td>
+    <td>{{ m.subject.name }}</td><td>{{ m.exam_type }}</td><td>{{ m.score }} / {{ m.max_score }}</td></tr>
+  {% else %}<tr><td colspan="5" class="text-muted text-center">No marks yet.</td></tr>{% endfor %}
+</table>
+<p class="text-muted small">Showing up to 200 rows.</p>
+{% endblock %}

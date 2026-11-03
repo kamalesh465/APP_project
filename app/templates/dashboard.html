@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import stat_card, line_chart, pct_cell with context %}
+{% block content %}
+<h3 class="mb-3">Dashboard</h3>
+<div class="row">
+  {{ stat_card("Students", stats.students) }}
+  {{ stat_card("Subjects", stats.subjects, "info") }}
+  {{ stat_card("Average attendance", stats.average ~ "%", "success") }}
+  {{ stat_card("Below " ~ config.ATTENDANCE_THRESHOLD ~ "%", stats.at_risk, "danger") }}
+</div>
+<div class="row">
+  <div class="col-lg-8 mb-3">
+    <div class="card shadow-sm"><div class="card-body">
+      <h5>Weekly attendance trend</h5>
+      {{ line_chart("weekly", labels, values, "Attendance %") }}
+    </div></div>
+  </div>
+  <div class="col-lg-4 mb-3">
+    <div class="card shadow-sm"><div class="card-body">
+      <h5>Lowest attendance</h5>
+      <ul class="list-group list-group-flush">
+      {% for r in lowest %}
+        <li class="list-group-item d-flex justify-content-between">
+          <a href="{{ url_for('students.detail', sid=r.student_id) }}">{{ r.name }}</a>{{ pct_cell(r.percentage) }}
+        </li>
+      {% else %}<li class="list-group-item text-muted">No data yet. Run seed.py.</li>{% endfor %}
+      </ul>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

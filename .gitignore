@@ -1,0 +1,14 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+instance/
+*.db
+*.sqlite3
+.vscode/
+.idea/
+spark-warehouse/
+metastore_db/
+derby.log
+.DS_Store

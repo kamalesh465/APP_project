@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import student_table with context %}
+{% block content %}
+<h3>Defaulters (below {{ config.ATTENDANCE_THRESHOLD }}%)</h3>
+<p class="text-muted">{{ rows|length }} of {{ total }} students are at risk.</p>
+{{ student_table(rows) }}
+{% endblock %}

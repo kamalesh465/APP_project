@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import stat_card, line_chart with context %}
+{% block content %}
+<h3>Attendance trends &amp; analysis</h3>
+<div class="row">
+  {{ stat_card("Mean", stats.mean ~ "%") }}
+  {{ stat_card("Median", stats.median ~ "%", "info") }}
+  {{ stat_card("Std deviation", stats.std, "secondary") }}
+  {{ stat_card("Overall trend", direction, "warning") }}
+</div>
+
+<div class="card shadow-sm mb-3"><div class="card-body">
+  <h5>Weekly attendance (trend slope: {{ slope }} % per week)</h5>
+  {{ line_chart("weekly", labels, values, "Attendance %") }}
+</div></div>
+
+<div class="row">
+  <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>By subject</h5><canvas id="subj"></canvas></div></div></div>
+  <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>By department</h5><canvas id="dept"></canvas></div></div></div>
+</div>
+
+<div class="card shadow-sm mb-3"><div class="card-body">
+  <h5>Attendance vs marks
+    {% if corr is not none %}<span class="badge bg-primary">Pearson r = {{ corr }}</span>{% endif %}</h5>
+  <canvas id="scatter" height="100"></canvas>
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const bar = (id, rows, key) => new Chart(document.getElementById(id), {
+  type: "bar",
+  data: { labels: rows.map(r => r[key]),
+          datasets: [{ label: "Attendance %", data: rows.map(r => r.percentage), backgroundColor: "#0d6efd" }] },
+  options: { scales: { y: { min: 0, max: 100 } } }
+});
+bar("subj", {{ subjects|tojson }}, "subject");
+bar("dept", {{ depts|tojson }}, "department");
+new Chart(document.getElementById("scatter"), {
+  type: "scatter",
+  data: { datasets: [{ label: "Students", data: {{ points|tojson }}, backgroundColor: "#dc3545" }] },
+  options: { scales: { x: { title: { display: true, text: "Attendance %" } },
+                       y: { title: { display: true, text: "Average marks %" } } } }
+});
+</script>
+{% endblock %}

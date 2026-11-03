@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import student_table, pct_cell with context %}
+{% block content %}
+<h3>Attendance report</h3>
+<p class="text-muted">Rows in red are below {{ config.ATTENDANCE_THRESHOLD }}%.</p>
+{{ student_table(rows) }}
+
+<h5 class="mt-4">Student x Subject matrix</h5>
+<div class="table-responsive">
+<table class="table table-sm table-bordered bg-white text-center">
+  <thead class="table-dark"><tr><th>Roll</th><th>Name</th>{% for s in subjects %}<th>{{ s }}</th>{% endfor %}</tr></thead>
+  {% for r in matrix %}
+  <tr><td>{{ r.roll_no }}</td><td class="text-start">{{ r.name }}</td>
+    {% for v in r['values'] %}<td class="{{ 'table-danger' if v < config.ATTENDANCE_THRESHOLD }}">{{ v }}</td>{% endfor %}</tr>
+  {% endfor %}
+</table></div>
+{% endblock %}

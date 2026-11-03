@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import stat_card, status_badge, pct_cell, line_chart with context %}
+{% block content %}
+<h3>{{ student.name }} <small class="text-muted">({{ student.roll_no }} &middot; {{ student.department }})</small></h3>
+{% if overall %}
+<div class="row mt-3">
+  {{ stat_card("Overall attendance", overall.percentage ~ "%", "danger" if overall.status == "At Risk" else "success") }}
+  {{ stat_card("Classes attended", overall.attended ~ " / " ~ overall.total, "info") }}
+  {{ stat_card("Trend", direction ~ " (" ~ slope ~ "/wk)", "primary") }}
+  {{ stat_card("Z-score vs class", overall.z_score, "secondary") }}
+</div>
+{% if overall.status == "At Risk" %}
+<div class="alert alert-danger">Below the {{ config.ATTENDANCE_THRESHOLD }}% threshold. Must attend the next
+  <strong>{{ overall.classes_needed }}</strong> classes in a row to reach {{ config.ATTENDANCE_THRESHOLD }}%.</div>
+{% endif %}
+<div class="row">
+  <div class="col-lg-7 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>Weekly attendance</h5>{{ line_chart("trend", labels, values, "Attendance %") }}</div></div></div>
+  <div class="col-lg-5 mb-3"><div class="card shadow-sm"><div class="card-body">
+    <h5>By subject</h5>
+    <table class="table table-sm">
+      {% for s in subjects %}<tr><td>{{ s.subject }}</td><td>{{ s.attended }}/{{ s.total }}</td><td>{{ pct_cell(s.percentage) }}</td></tr>{% endfor %}
+    </table></div></div></div>
+</div>
+{% else %}<p class="text-muted">No attendance recorded yet.</p>{% endif %}
+<h5>Marks</h5>
+<table class="table table-sm bg-white">
+  <thead><tr><th>Subject</th><th>Exam</th><th>Score</th></tr></thead>
+  {% for m in marks %}<tr><td>{{ m.subject.name }}</td><td>{{ m.exam_type }}</td><td>{{ m.score }} / {{ m.max_score }}</td></tr>
+  {% else %}<tr><td colspan="3" class="text-muted">No marks yet.</td></tr>{% endfor %}
+</table>
+{% endblock %}
