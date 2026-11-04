@@ -39,6 +39,10 @@ def run_spark_analysis(att_df, export_dir, threshold):
     csv_path = os.path.join(export_dir, "attendance_export.csv")
     att_df.assign(date=att_df["date"].dt.strftime("%Y-%m-%d")).to_csv(csv_path, index=False)
 
+    if att_df.empty:
+        return {"total_rows": 0, "department": [], "subjects": [], "rolling": [],
+                "streaks": [], "at_risk_count": 0}
+
     spark = get_spark()
 
     # 2. read into a Spark DataFrame

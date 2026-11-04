@@ -26,23 +26,58 @@ EXAMS = ["Internal 1", "Internal 2", "Model Exam"]
 
 app = create_app()
 with app.app_context():
-    db.drop_all()
     db.create_all()
 
-    subjects = [Subject(code=c, name=n) for c, n in SUBJECTS]
+    existing_subjects = Subject.query.all()
+    subjects = []
+    new_subjects = []
+    for code, name in SUBJECTS:
+        subject = next((item for item in existing_subjects
+                        if item.code.casefold() == code.casefold()), None)
+        if subject is None:
+            subject = next((item for item in existing_subjects
+                            if item.name.casefold() == name.casefold()), None)
+        if subject is None:
+            subject = Subject(code=code, name=name)
+            new_subjects.append(subject)
+        subjects.append(subject)
+    db.session.add_all(new_subjects)
+    db.session.flush()
+    subjects = list({subject.id: subject for subject in subjects}.values())
+
+    roll_nos = [f"23{DEPTS[i % 5]}{i + 1:03d}" for i in range(N_STUDENTS)]
+    students_by_roll = {student.roll_no: student for student in
+                        Student.query.filter(Student.roll_no.in_(roll_nos)).all()}
     students = []
+    new_students = []
     for i in range(N_STUDENTS):
-        students.append(Student(
-            roll_no=f"23{DEPTS[i % 5]}{i + 1:03d}",
-            name=f"{rng.choice(FIRST)} {rng.choice(LAST)}",
-            department=DEPTS[i % 5],
-            semester=int(rng.choice([3, 5]))))
-    db.session.add_all(subjects + students)
+        roll_no = roll_nos[i]
+        student = students_by_roll.get(roll_no)
+        if student is None:
+            student = Student(
+                roll_no=roll_no,
+                name=f"{rng.choice(FIRST)} {rng.choice(LAST)}",
+                department=DEPTS[i % 5],
+                semester=int(rng.choice([3, 5])))
+            new_students.append(student)
+            students_by_roll[roll_no] = student
+        students.append(student)
+    db.session.add_all(new_students)
+    db.session.flush()
     db.session.commit()
 
     days = pd.bdate_range(end=date.today(), periods=N_DAYS).date
     t = np.linspace(-1, 1, N_DAYS)
 
+    subject_ids = [subject.id for subject in subjects]
+    attendance_keys = {
+        (row.student_id, row.subject_id, row.date)
+        for row in Attendance.query.filter(Attendance.subject_id.in_(subject_ids)).all()
+    }
+    mark_keys = {
+        (row.student_id, row.subject_id, row.exam_type)
+        for row in Mark.query.filter(Mark.subject_id.in_(subject_ids)).all()
+    }
     att_rows, mark_rows = [], []
     for st in students:
         base = rng.beta(8, 2.5)                  # student's typical attendance rate
@@ -51,9 +86,14 @@ with app.app_context():
             prob = np.clip(base + drift * t + rng.normal(0, 0.03), 0.2, 0.99)
             present = rng.random(N_DAYS) < prob
             for d, p in zip(days, present):
-                att_rows.append(dict(student_id=st.id, subject_id=sub.id, date=d,
-                                     status="Present" if p else "Absent"))
+                key = (st.id, sub.id, d)
+                if key not in attendance_keys:
+                    att_rows.append(dict(student_id=st.id, subject_id=sub.id, date=d,
+                                         status="Present" if p else "Absent"))
             for exam in EXAMS:                   # marks loosely depend on attendance
+                key = (st.id, sub.id, exam)
+                if key in mark_keys:
+                    continue
                 score = np.clip(30 + 60 * base + rng.normal(0, 8), 0, 100)
                 mark_rows.append(dict(student_id=st.id, subject_id=sub.id,
                                       exam_type=exam, score=round(float(score), 1),
@@ -62,5 +102,5 @@ with app.app_context():
     db.session.bulk_insert_mappings(Attendance, att_rows)
     db.session.bulk_insert_mappings(Mark, mark_rows)
     db.session.commit()
-    print(f"Seeded {len(students)} students, {len(subjects)} subjects, "
-          f"{len(att_rows)} attendance rows, {len(mark_rows)} marks.")
+    print(f"Ensured {len(students)} students and {len(subjects)} seed subjects; "
+          f"added {len(att_rows)} attendance rows and {len(mark_rows)} marks.")

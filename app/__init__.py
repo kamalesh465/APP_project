@@ -10,13 +10,14 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     db.init_app(app)
 
-    from .blueprints import main, students, attendance, marks, analytics
+    from .blueprints import main, students, attendance, marks, analytics, subjects
 
     app.register_blueprint(main.bp)
     app.register_blueprint(students.bp, url_prefix="/students")
     app.register_blueprint(attendance.bp, url_prefix="/attendance")
     app.register_blueprint(marks.bp, url_prefix="/marks")
     app.register_blueprint(analytics.bp, url_prefix="/analytics")
+    app.register_blueprint(subjects.bp, url_prefix="/subjects")
 
     with app.app_context():
         db.create_all()

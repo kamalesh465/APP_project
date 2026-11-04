@@ -7,6 +7,12 @@ bp = Blueprint("analytics", __name__)
 _spark_cache = {}      # keeps the last Spark result so the page is fast to reload
 
 
+def invalidate_spark_cache():
+    """Clear saved results and trigger a refresh on the next Spark page visit."""
+    _spark_cache.clear()
+    _spark_cache["invalidated"] = True
+
+
 @bp.route("/defaulters")
 def defaulters():
     threshold = current_app.config["ATTENDANCE_THRESHOLD"]
@@ -34,7 +40,8 @@ def trends():
 
 @bp.route("/spark", methods=["GET", "POST"])
 def spark():
-    if request.method == "POST":
+    refresh = _spark_cache.pop("invalidated", False)
+    if request.method == "POST" or refresh:
         try:
             from ..services.spark_service import run_spark_analysis   # lazy import
             _spark_cache["result"] = run_spark_analysis(

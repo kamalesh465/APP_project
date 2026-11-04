@@ -16,15 +16,19 @@
 
 <div class="row">
   <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
-    <h5>By subject</h5><canvas id="subj"></canvas></div></div></div>
+    <h5>By subject</h5>
+    {% if subjects %}<canvas id="subj"></canvas>{% else %}<p class="text-muted">No data available.</p>{% endif %}
+  </div></div></div>
   <div class="col-md-6 mb-3"><div class="card shadow-sm"><div class="card-body">
-    <h5>By department</h5><canvas id="dept"></canvas></div></div></div>
+    <h5>By department</h5>
+    {% if depts %}<canvas id="dept"></canvas>{% else %}<p class="text-muted">No data available.</p>{% endif %}
+  </div></div></div>
 </div>
 
 <div class="card shadow-sm mb-3"><div class="card-body">
   <h5>Attendance vs marks
     {% if corr is not none %}<span class="badge bg-primary">Pearson r = {{ corr }}</span>{% endif %}</h5>
-  <canvas id="scatter" height="100"></canvas>
+  {% if points %}<canvas id="scatter" height="100"></canvas>{% else %}<p class="text-muted">No data available.</p>{% endif %}
 </div></div>
 {% endblock %}
 
@@ -36,13 +40,15 @@ const bar = (id, rows, key) => new Chart(document.getElementById(id), {
           datasets: [{ label: "Attendance %", data: rows.map(r => r.percentage), backgroundColor: "#0d6efd" }] },
   options: { scales: { y: { min: 0, max: 100 } } }
 });
-bar("subj", {{ subjects|tojson }}, "subject");
-bar("dept", {{ depts|tojson }}, "department");
+{% if subjects %}bar("subj", {{ subjects|tojson }}, "subject");{% endif %}
+{% if depts %}bar("dept", {{ depts|tojson }}, "department");{% endif %}
+{% if points %}
 new Chart(document.getElementById("scatter"), {
   type: "scatter",
   data: { datasets: [{ label: "Students", data: {{ points|tojson }}, backgroundColor: "#dc3545" }] },
   options: { scales: { x: { title: { display: true, text: "Attendance %" } },
                        y: { title: { display: true, text: "Average marks %" } } } }
 });
+{% endif %}
 </script>
 {% endblock %}

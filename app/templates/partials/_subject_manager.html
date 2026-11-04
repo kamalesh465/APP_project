@@ -1,0 +1,76 @@
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h5>Manage Subjects</h5>
+    <form method="post" action="{{ url_for('subjects.add') }}" class="row g-2 align-items-end mb-3">
+      <input type="hidden" name="csrf_token" value="{{ _subject_csrf_token }}">
+      <div class="col-md-5">
+        <label class="form-label" for="subject-name">Subject name</label>
+        <input class="form-control" id="subject-name" name="name" required maxlength="100">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="subject-code">Subject code</label>
+        <input class="form-control" id="subject-code" name="code" required maxlength="20">
+      </div>
+      <div class="col-md-2"><button class="btn btn-primary">Add Subject</button></div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Code</th><th>Subject</th><th>Attendance</th><th>Marks</th><th></th></tr></thead>
+        <tbody>
+        {% for subject in subjects %}
+          {% set counts = subject_record_counts.get(subject.id, {"attendance": 0, "marks": 0}) %}
+          <tr>
+            <td>{{ subject.code }}</td><td>{{ subject.name }}</td>
+            <td>{{ counts.attendance }}</td><td>{{ counts.marks }}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-danger" type="button"
+                      data-bs-toggle="modal" data-bs-target="#deleteSubjectModal"
+                      data-delete-url="{{ url_for('subjects.delete', subject_id=subject.id) }}"
+                      data-subject-name="{{ subject.name }}"
+                      data-attendance-count="{{ counts.attendance }}"
+                      data-marks-count="{{ counts.marks }}">Delete</button>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center text-muted">No subjects have been added.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteSubjectModal" tabindex="-1" aria-labelledby="deleteSubjectTitle" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteSubjectTitle">Delete subject?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Delete <strong id="deleteSubjectName"></strong>?
+        This will also remove <strong id="deleteAttendanceCount"></strong> attendance records and
+        <strong id="deleteMarksCount"></strong> marks records.
+        This action cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteSubjectForm" method="post">
+          <input type="hidden" name="csrf_token" value="{{ _subject_csrf_token }}">
+          <button type="submit" class="btn btn-danger">Delete subject</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById("deleteSubjectModal").addEventListener("show.bs.modal", event => {
+  const button = event.relatedTarget;
+  document.getElementById("deleteSubjectName").textContent = button.dataset.subjectName;
+  document.getElementById("deleteAttendanceCount").textContent = button.dataset.attendanceCount;
+  document.getElementById("deleteMarksCount").textContent = button.dataset.marksCount;
+  document.getElementById("deleteSubjectForm").action = button.dataset.deleteUrl;
+});
+</script>

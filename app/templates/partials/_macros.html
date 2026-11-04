@@ -42,6 +42,7 @@
 {% endmacro %}
 
 {% macro line_chart(canvas_id, labels, values, label) %}
+{% if labels and values %}
 <canvas id="{{ canvas_id }}" height="110"></canvas>
 <script>
 new Chart(document.getElementById("{{ canvas_id }}"), {
@@ -52,4 +53,7 @@ new Chart(document.getElementById("{{ canvas_id }}"), {
   options: { scales: { y: { min: 0, max: 100 } } }
 });
 </script>
+{% else %}
+<div class="text-muted py-4 text-center">No data available.</div>
+{% endif %}
 {% endmacro %}

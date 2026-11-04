@@ -10,6 +10,7 @@ PySpark-based analytics workflow.
 - Dashboard with student and subject totals, attendance summaries, at-risk
   counts, and weekly attendance trends.
 - Create, view, update, search, and delete student records.
+- Add and delete subjects from the dashboard, including their related records.
 - Record attendance by subject and date; review attendance reports.
 - Record and view student marks.
 - Analyze attendance defaulters, trends, departments, subjects, and the
@@ -44,6 +45,7 @@ APP_project/
 │   │   ├── attendance.py
 │   │   ├── main.py
 │   │   ├── marks.py
+│   │   ├── subjects.py
 │   │   └── students.py
 │   ├── services/
 │   │   ├── analytics_service.py
@@ -54,7 +56,8 @@ APP_project/
 │       ├── partials/
 │       │   ├── _flash.html
 │       │   ├── _macros.html
-│       │   └── _navbar.html
+│       │   ├── _navbar.html
+│       │   └── _subject_manager.html
 │       ├── analytics/
 │       ├── attendance/
 │       ├── marks/
@@ -126,8 +129,9 @@ ignored by Git. The CSV in `data/` is kept in version control.
    python seed.py
    ```
 
-   **Warning:** `seed.py` drops and recreates the database tables before
-   inserting sample records. Do not run it if you need to preserve local data.
+   `seed.py` adds any missing sample subjects, students, attendance, and marks.
+   It does not remove existing data or user-added subjects, and can be run again
+   without duplicating seeded records.
 
 7. Start the Flask application:
 
