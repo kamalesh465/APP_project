@@ -1,6 +1,9 @@
 from .extensions import db
 
 
+DEPARTMENTS = ("CSE", "ECE", "MECH", "CIVIL", "IT")
+
+
 class Student(db.Model):
     __tablename__ = "students"
     id = db.Column(db.Integer, primary_key=True)
@@ -20,6 +23,8 @@ class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
+    department = db.Column(db.String(50), nullable=False)
+    semester = db.Column(db.Integer, nullable=False)
 
     attendance = db.relationship("Attendance", backref="subject",
                                  cascade="all, delete-orphan")

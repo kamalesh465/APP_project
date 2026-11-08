@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 
 from ..extensions import db
-from ..models import Student, Mark
+from ..models import DEPARTMENTS, Student, Mark
 from ..services import analytics_service as an
 
 bp = Blueprint("students", __name__)
@@ -18,10 +18,14 @@ def list_students():
 
 
 def _save(student):
+    department = request.form.get("department", "").strip()
+    if department not in DEPARTMENTS:
+        return False
     student.roll_no = request.form["roll_no"].strip()
     student.name = request.form["name"].strip()
-    student.department = request.form["department"].strip()
+    student.department = department
     student.semester = int(request.form["semester"])
+    return True
 
 
 @bp.route("/add", methods=["GET", "POST"])
@@ -31,23 +35,27 @@ def add():
             flash("Roll number already exists.", "danger")
         else:
             s = Student()
-            _save(s)
-            db.session.add(s)
-            db.session.commit()
-            flash("Student added.", "success")
-            return redirect(url_for("students.list_students"))
-    return render_template("students/form.html", student=None)
+            if _save(s):
+                db.session.add(s)
+                db.session.commit()
+                flash("Student added.", "success")
+                return redirect(url_for("students.list_students"))
+            flash("Select a valid department.", "danger")
+    return render_template("students/form.html", student=None,
+                           departments=DEPARTMENTS)
 
 
 @bp.route("/<int:sid>/edit", methods=["GET", "POST"])
 def edit(sid):
     s = db.get_or_404(Student, sid)
     if request.method == "POST":
-        _save(s)
-        db.session.commit()
-        flash("Student updated.", "success")
-        return redirect(url_for("students.list_students"))
-    return render_template("students/form.html", student=s)
+        if _save(s):
+            db.session.commit()
+            flash("Student updated.", "success")
+            return redirect(url_for("students.list_students"))
+        flash("Select a valid department.", "danger")
+    return render_template("students/form.html", student=s,
+                           departments=DEPARTMENTS)
 
 
 @bp.route("/<int:sid>/delete", methods=["POST"])

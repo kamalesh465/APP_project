@@ -5,10 +5,11 @@ from flask import Blueprint, flash, redirect, request, session, url_for, current
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
-from ..models import Attendance, Mark, Subject
+from ..models import DEPARTMENTS, Attendance, Mark, Subject
 from .analytics import invalidate_spark_cache
 
 bp = Blueprint("subjects", __name__)
+VALID_SEMESTERS = tuple(str(semester) for semester in range(1, 9))
 
 
 def subject_csrf_token():
@@ -34,25 +35,34 @@ def _dashboard_redirect():
 
 @bp.route("/add", methods=["POST"])
 def add():
-    """Create a subject after validating its name, code, and form token."""
+    """Create a subject after validating its details and form token."""
     if not _valid_csrf_token():
         flash("The form expired or was invalid. Please try again.", "danger")
         return _dashboard_redirect()
 
     name = request.form.get("name", "").strip()
     code = request.form.get("code", "").strip()
-    if not name or not code:
-        flash("Subject name and code are required.", "danger")
+    department = request.form.get("department", "")
+    semester = request.form.get("semester", "")
+    if not name or not code or department not in DEPARTMENTS:
+        flash("Subject name, code, and a valid department are required.", "danger")
+        return _dashboard_redirect()
+    if semester not in VALID_SEMESTERS:
+        flash("Select a valid semester (1 through 8).", "danger")
         return _dashboard_redirect()
 
     try:
         existing_subjects = Subject.query.all()
-        if any(subject.name.casefold() == name.casefold()
-               or subject.code.casefold() == code.casefold()
+        if any(subject.code.casefold() == code.casefold()
+               or (subject.name.casefold() == name.casefold()
+                   and subject.department == department
+                   and subject.semester == int(semester))
                for subject in existing_subjects):
-            flash("A subject with that name or code already exists.", "danger")
+            flash("That subject code or name, department, and semester combination already exists.",
+                  "danger")
             return _dashboard_redirect()
-        db.session.add(Subject(name=name, code=code))
+        db.session.add(Subject(name=name, code=code, department=department,
+                               semester=int(semester)))
         db.session.commit()
         invalidate_spark_cache()
         flash(f"Subject {name} added.", "success")
@@ -60,6 +70,44 @@ def add():
         db.session.rollback()
         current_app.logger.exception("Unable to add subject")
         flash("The subject could not be added because of a database error.", "danger")
+    return _dashboard_redirect()
+
+
+@bp.route("/edit/<int:subject_id>", methods=["POST"])
+def edit(subject_id):
+    """Update a subject's department and semester after validating its form."""
+    if not _valid_csrf_token():
+        flash("The form expired or was invalid. Please try again.", "danger")
+        return _dashboard_redirect()
+
+    department = request.form.get("department", "")
+    semester = request.form.get("semester", "")
+    if department not in DEPARTMENTS or semester not in VALID_SEMESTERS:
+        flash("Select a valid department and semester.", "danger")
+        return _dashboard_redirect()
+
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        flash("That subject no longer exists.", "warning")
+        return _dashboard_redirect()
+
+    duplicate = any(
+        other.id != subject.id
+        and other.name.casefold() == subject.name.casefold()
+        and other.department == department
+        and other.semester == int(semester)
+        for other in Subject.query.all()
+    )
+    if duplicate:
+        flash("Another subject has that name, department, and semester combination.",
+              "danger")
+        return _dashboard_redirect()
+
+    subject.department = department
+    subject.semester = int(semester)
+    db.session.commit()
+    invalidate_spark_cache()
+    flash(f"Department and semester updated for {subject.name}.", "success")
     return _dashboard_redirect()
 
 

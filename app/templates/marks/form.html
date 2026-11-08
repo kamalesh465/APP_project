@@ -3,11 +3,11 @@
 <h3>Add mark</h3>
 <form method="post" class="card card-body shadow-sm" style="max-width:520px">
   <div class="mb-3"><label class="form-label">Student</label>
-    <select class="form-select" name="student_id" required>
-      {% for s in students %}<option value="{{ s.id }}">{{ s.roll_no }} - {{ s.name }}</option>{% endfor %}</select></div>
+    <select class="form-select" name="student_id" id="student_id" required>
+      {% for s in students %}<option value="{{ s.id }}" {{ 'selected' if selected_student and s.id == selected_student.id }}>{{ s.roll_no }} - {{ s.name }}</option>{% endfor %}</select></div>
   <div class="mb-3"><label class="form-label">Subject</label>
-    <select class="form-select" name="subject_id" required>
-      {% for s in subjects %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+    <select class="form-select" name="subject_id" id="subject_id" required>
+      {% for s in subjects %}<option value="{{ s.id }}" {{ 'selected' if s.id|string == selected_subject_id|string }}>{{ s.code }} - {{ s.name }}</option>{% endfor %}</select></div>
   <div class="mb-3"><label class="form-label">Exam type</label>
     <input class="form-control" name="exam_type" placeholder="Internal 1" required></div>
   <div class="row"><div class="col mb-3"><label class="form-label">Score</label>
@@ -16,4 +16,31 @@
       <input class="form-control" type="number" step="0.01" min="1" name="max_score" value="100" required></div></div>
   <button class="btn btn-primary">Save</button>
 </form>
+{% endblock %}
+{% block scripts %}
+<script>
+const studentOptions = {{ student_options|tojson }};
+const subjectOptions = {{ subject_options|tojson }};
+const studentSelect = document.getElementById("student_id");
+const subjectSelect = document.getElementById("subject_id");
+
+function updateSubjects() {
+  const student = studentOptions.find(option => String(option.id) === studentSelect.value);
+  const currentSubject = subjectSelect.value;
+  subjectSelect.replaceChildren(new Option("Select subject", ""));
+  if (!student) return;
+  subjectOptions
+    .filter(subject => subject.department === student.department
+      && subject.semester === student.semester)
+    .forEach(subject => {
+      const option = new Option(`${subject.code} - ${subject.name}`, subject.id);
+      subjectSelect.add(option);
+    });
+  if ([...subjectSelect.options].some(option => option.value === currentSubject)) {
+    subjectSelect.value = currentSubject;
+  }
+}
+
+studentSelect.addEventListener("change", updateSubjects);
+</script>
 {% endblock %}

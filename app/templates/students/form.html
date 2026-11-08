@@ -7,7 +7,12 @@
   <div class="mb-3"><label class="form-label">Name</label>
     <input class="form-control" name="name" required value="{{ student.name if student }}"></div>
   <div class="mb-3"><label class="form-label">Department</label>
-    <input class="form-control" name="department" required value="{{ student.department if student }}"></div>
+    <select class="form-select" name="department" required>
+      <option value="">Select</option>
+      {% for department in departments %}
+      <option value="{{ department }}" {{ 'selected' if student and student.department == department }}>{{ department }}</option>
+      {% endfor %}
+    </select></div>
   <div class="mb-3"><label class="form-label">Semester</label>
     <input class="form-control" type="number" min="1" max="8" name="semester" required value="{{ student.semester if student else 1 }}"></div>
   <button class="btn btn-primary">Save</button>

@@ -9,7 +9,7 @@ import pandas as pd
 
 from app import create_app
 from app.extensions import db
-from app.models import Student, Subject, Attendance, Mark
+from app.models import DEPARTMENTS, Student, Subject, Attendance, Mark
 
 N_STUDENTS = 60
 N_DAYS = 60
@@ -19,33 +19,52 @@ FIRST = ["Aarav", "Diya", "Karthik", "Meera", "Rohan", "Sneha", "Vikram", "Anjal
          "Arjun", "Priya", "Nikhil", "Divya", "Surya", "Lakshmi", "Harish", "Kavya",
          "Rahul", "Nisha", "Gokul", "Swathi"]
 LAST = ["Kumar", "Raj", "Nair", "Iyer", "Reddy", "Sharma", "Pillai", "Menon", "Das", "Singh"]
-DEPTS = ["CSE", "ECE", "MECH", "CIVIL", "IT"]
-SUBJECTS = [("CS101", "Python Programming"), ("CS102", "Data Structures"),
-            ("CS103", "Database Systems"), ("CS104", "Mathematics"), ("CS105", "Operating Systems")]
+SUBJECT_NAMES = {
+    "CSE": {3: ["Data Structures", "Database Systems"],
+            5: ["Operating Systems", "Computer Networks"]},
+    "ECE": {3: ["Analog Circuits", "Digital Systems"],
+            5: ["Communication Systems", "Microprocessors"]},
+    "MECH": {3: ["Thermodynamics", "Manufacturing Processes"],
+             5: ["Machine Design", "Fluid Mechanics"]},
+    "CIVIL": {3: ["Structural Analysis", "Surveying"],
+              5: ["Geotechnical Engineering", "Transportation Engineering"]},
+    "IT": {3: ["Object-Oriented Programming", "Web Technologies"],
+           5: ["Cloud Computing", "Software Engineering"]},
+}
+SUBJECTS = [
+    (f"{department}{semester}{index:02d}", name, department, semester)
+    for department in DEPARTMENTS
+    for semester, names in SUBJECT_NAMES[department].items()
+    for index, name in enumerate(names, start=1)
+]
 EXAMS = ["Internal 1", "Internal 2", "Model Exam"]
 
 app = create_app()
 with app.app_context():
     db.create_all()
 
-    existing_subjects = Subject.query.all()
+    existing_subjects = {
+        subject.code.casefold(): subject for subject in Subject.query.all()
+    }
     subjects = []
     new_subjects = []
-    for code, name in SUBJECTS:
-        subject = next((item for item in existing_subjects
-                        if item.code.casefold() == code.casefold()), None)
+    for code, name, department, semester in SUBJECTS:
+        subject = existing_subjects.get(code.casefold())
         if subject is None:
-            subject = next((item for item in existing_subjects
-                            if item.name.casefold() == name.casefold()), None)
-        if subject is None:
-            subject = Subject(code=code, name=name)
+            subject = Subject(code=code, name=name, department=department,
+                              semester=semester)
             new_subjects.append(subject)
+        else:
+            subject.name = name
+            subject.department = department
+            subject.semester = semester
         subjects.append(subject)
     db.session.add_all(new_subjects)
     db.session.flush()
     subjects = list({subject.id: subject for subject in subjects}.values())
 
-    roll_nos = [f"23{DEPTS[i % 5]}{i + 1:03d}" for i in range(N_STUDENTS)]
+    roll_nos = [f"23{DEPARTMENTS[i % len(DEPARTMENTS)]}{i + 1:03d}"
+                for i in range(N_STUDENTS)]
     students_by_roll = {student.roll_no: student for student in
                         Student.query.filter(Student.roll_no.in_(roll_nos)).all()}
     students = []
@@ -57,10 +76,14 @@ with app.app_context():
             student = Student(
                 roll_no=roll_no,
                 name=f"{rng.choice(FIRST)} {rng.choice(LAST)}",
-                department=DEPTS[i % 5],
+                department=DEPARTMENTS[i % len(DEPARTMENTS)],
                 semester=int(rng.choice([3, 5])))
             new_students.append(student)
             students_by_roll[roll_no] = student
+        else:
+            student.department = DEPARTMENTS[i % len(DEPARTMENTS)]
+            if student.semester not in (3, 5):
+                student.semester = int(rng.choice([3, 5]))
         students.append(student)
     db.session.add_all(new_students)
     db.session.flush()
@@ -83,6 +106,8 @@ with app.app_context():
         base = rng.beta(8, 2.5)                  # student's typical attendance rate
         drift = rng.normal(0, 0.08)              # improving or declining over time
         for sub in subjects:
+            if st.department != sub.department or st.semester != sub.semester:
+                continue
             prob = np.clip(base + drift * t + rng.normal(0, 0.03), 0.2, 0.99)
             present = rng.random(N_DAYS) < prob
             for d, p in zip(days, present):
