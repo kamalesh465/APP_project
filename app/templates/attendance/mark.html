@@ -4,11 +4,15 @@
 <form method="get" class="row g-2 mb-4">
   <div class="col-md-5"><select class="form-select" name="subject_id" required>
     <option value="">Select subject</option>
-    {% for s in subjects %}<option value="{{ s.id }}" {{ 'selected' if s.id == subject_id }}>{{ s.code }} - {{ s.name }}</option>{% endfor %}
+    {% for s in subjects %}<option value="{{ s.id }}" {{ 'selected' if s.id == subject_id }}>{{ s.code }} - {{ s.name }} (Semester {{ s.semester }})</option>{% endfor %}
   </select></div>
   <div class="col-md-3"><input type="date" class="form-control" name="date" value="{{ d_str }}" required></div>
   <div class="col-md-2"><button class="btn btn-secondary">Load students</button></div>
 </form>
+
+{% if subject and not students %}
+<div class="alert alert-info">No students are assigned to semester {{ subject.semester }} for this subject.</div>
+{% endif %}
 
 {% if students %}
 <form method="post">

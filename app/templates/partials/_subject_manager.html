@@ -11,17 +11,38 @@
         <label class="form-label" for="subject-code">Subject code</label>
         <input class="form-control" id="subject-code" name="code" required maxlength="20">
       </div>
+      <div class="col-md-2">
+        <label class="form-label" for="subject-semester">Semester</label>
+        <select class="form-select" id="subject-semester" name="semester" required>
+          <option value="">Select</option>
+          {% for semester in range(1, 9) %}
+          <option value="{{ semester }}">{{ semester }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="col-md-2"><button class="btn btn-primary">Add Subject</button></div>
     </form>
 
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
-        <thead><tr><th>Code</th><th>Subject</th><th>Attendance</th><th>Marks</th><th></th></tr></thead>
+        <thead><tr><th>Code</th><th>Subject</th><th>Semester</th><th>Attendance</th><th>Marks</th><th></th></tr></thead>
         <tbody>
         {% for subject in subjects %}
           {% set counts = subject_record_counts.get(subject.id, {"attendance": 0, "marks": 0}) %}
           <tr>
             <td>{{ subject.code }}</td><td>{{ subject.name }}</td>
+            <td>
+              <form method="post" action="{{ url_for('subjects.edit', subject_id=subject.id) }}"
+                    class="d-flex gap-1">
+                <input type="hidden" name="csrf_token" value="{{ _subject_csrf_token }}">
+                <select class="form-select form-select-sm" name="semester" aria-label="Semester for {{ subject.name }}">
+                  {% for semester in range(1, 9) %}
+                  <option value="{{ semester }}" {{ 'selected' if subject.semester == semester }}>{{ semester }}</option>
+                  {% endfor %}
+                </select>
+                <button class="btn btn-sm btn-outline-primary">Save</button>
+              </form>
+            </td>
             <td>{{ counts.attendance }}</td><td>{{ counts.marks }}</td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-danger" type="button"
@@ -33,7 +54,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="5" class="text-center text-muted">No subjects have been added.</td></tr>
+          <tr><td colspan="6" class="text-center text-muted">No subjects have been added.</td></tr>
         {% endfor %}
         </tbody>
       </table>

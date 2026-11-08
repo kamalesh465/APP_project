@@ -20,8 +20,9 @@ FIRST = ["Aarav", "Diya", "Karthik", "Meera", "Rohan", "Sneha", "Vikram", "Anjal
          "Rahul", "Nisha", "Gokul", "Swathi"]
 LAST = ["Kumar", "Raj", "Nair", "Iyer", "Reddy", "Sharma", "Pillai", "Menon", "Das", "Singh"]
 DEPTS = ["CSE", "ECE", "MECH", "CIVIL", "IT"]
-SUBJECTS = [("CS101", "Python Programming"), ("CS102", "Data Structures"),
-            ("CS103", "Database Systems"), ("CS104", "Mathematics"), ("CS105", "Operating Systems")]
+SUBJECTS = [("CS101", "Python Programming", 3), ("CS102", "Data Structures", 3),
+            ("CS103", "Database Systems", 5), ("CS104", "Mathematics", 3),
+            ("CS105", "Operating Systems", 5)]
 EXAMS = ["Internal 1", "Internal 2", "Model Exam"]
 
 app = create_app()
@@ -31,15 +32,17 @@ with app.app_context():
     existing_subjects = Subject.query.all()
     subjects = []
     new_subjects = []
-    for code, name in SUBJECTS:
+    for code, name, semester in SUBJECTS:
         subject = next((item for item in existing_subjects
                         if item.code.casefold() == code.casefold()), None)
         if subject is None:
             subject = next((item for item in existing_subjects
                             if item.name.casefold() == name.casefold()), None)
         if subject is None:
-            subject = Subject(code=code, name=name)
+            subject = Subject(code=code, name=name, semester=semester)
             new_subjects.append(subject)
+        else:
+            subject.semester = semester
         subjects.append(subject)
     db.session.add_all(new_subjects)
     db.session.flush()
@@ -83,6 +86,8 @@ with app.app_context():
         base = rng.beta(8, 2.5)                  # student's typical attendance rate
         drift = rng.normal(0, 0.08)              # improving or declining over time
         for sub in subjects:
+            if st.semester != sub.semester:
+                continue
             prob = np.clip(base + drift * t + rng.normal(0, 0.03), 0.2, 0.99)
             present = rng.random(N_DAYS) < prob
             for d, p in zip(days, present):

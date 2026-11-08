@@ -9,6 +9,7 @@ from ..models import Attendance, Mark, Subject
 from .analytics import invalidate_spark_cache
 
 bp = Blueprint("subjects", __name__)
+VALID_SEMESTERS = tuple(str(semester) for semester in range(1, 9))
 
 
 def subject_csrf_token():
@@ -41,8 +42,9 @@ def add():
 
     name = request.form.get("name", "").strip()
     code = request.form.get("code", "").strip()
-    if not name or not code:
-        flash("Subject name and code are required.", "danger")
+    semester = request.form.get("semester", "")
+    if not name or not code or semester not in VALID_SEMESTERS:
+        flash("Subject name, code, and a valid semester (1 through 8) are required.", "danger")
         return _dashboard_redirect()
 
     try:
@@ -52,7 +54,7 @@ def add():
                for subject in existing_subjects):
             flash("A subject with that name or code already exists.", "danger")
             return _dashboard_redirect()
-        db.session.add(Subject(name=name, code=code))
+        db.session.add(Subject(name=name, code=code, semester=int(semester)))
         db.session.commit()
         invalidate_spark_cache()
         flash(f"Subject {name} added.", "success")
@@ -60,6 +62,30 @@ def add():
         db.session.rollback()
         current_app.logger.exception("Unable to add subject")
         flash("The subject could not be added because of a database error.", "danger")
+    return _dashboard_redirect()
+
+
+@bp.route("/edit/<int:subject_id>", methods=["POST"])
+def edit(subject_id):
+    """Update a subject's semester after validating the submitted value."""
+    if not _valid_csrf_token():
+        flash("The form expired or was invalid. Please try again.", "danger")
+        return _dashboard_redirect()
+
+    semester = request.form.get("semester", "")
+    if semester not in VALID_SEMESTERS:
+        flash("Select a valid semester (1 through 8).", "danger")
+        return _dashboard_redirect()
+
+    subject = db.session.get(Subject, subject_id)
+    if subject is None:
+        flash("That subject no longer exists.", "warning")
+        return _dashboard_redirect()
+
+    subject.semester = int(semester)
+    db.session.commit()
+    invalidate_spark_cache()
+    flash(f"Semester updated for {subject.name}.", "success")
     return _dashboard_redirect()
 
 
