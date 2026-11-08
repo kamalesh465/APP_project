@@ -35,6 +35,8 @@ def mark():
                 db.session.add(Attendance(student_id=s.id, subject_id=subject_id,
                                           date=d, status=status))
         db.session.commit()
+        from .analytics import invalidate_spark_cache
+        invalidate_spark_cache()
         flash("Attendance saved.", "success")
         return redirect(url_for("attendance.mark", subject_id=subject_id, date=d.isoformat()))
 

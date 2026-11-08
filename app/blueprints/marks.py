@@ -33,6 +33,8 @@ def add():
                             score=float(request.form["score"]),
                             max_score=float(request.form["max_score"])))
         db.session.commit()
+        from .analytics import invalidate_spark_cache
+        invalidate_spark_cache()
         flash("Mark recorded.", "success")
         return redirect(url_for("marks.index"))
 
