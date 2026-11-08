@@ -130,8 +130,20 @@ ignored by Git. The CSV in `data/` is kept in version control.
    ```
 
    `seed.py` adds any missing sample subjects, students, attendance, and marks.
-   It does not remove existing data or user-added subjects, and can be run again
+   It does not remove existing attendance or marks rows and can be run again
    without duplicating seeded records.
+
+   `create_all()` does not add the new required subject department column to
+   an existing SQLite database. To rebuild the local database with the current
+   schema and sample data, stop the application and run these commands from the
+   project root:
+
+   ```powershell
+   Remove-Item .\attendance.db
+   python seed.py
+   ```
+
+   Rebuilding deletes the existing local database and its records.
 
 7. Start the Flask application:
 

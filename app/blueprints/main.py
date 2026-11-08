@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, current_app
 from sqlalchemy import func
 
 from ..extensions import db
-from ..models import Student, Subject, Attendance, Mark
+from ..models import DEPARTMENTS, Student, Subject, Attendance, Mark
 from ..services import analytics_service as an
 from .subjects import subject_csrf_token
 
@@ -38,4 +38,5 @@ def dashboard():
     return render_template("dashboard.html", stats=stats, lowest=lowest,
                            labels=labels, values=values, subjects=subjects,
                            subject_record_counts=_subject_record_counts(),
+                           departments=DEPARTMENTS,
                            _subject_csrf_token=subject_csrf_token())

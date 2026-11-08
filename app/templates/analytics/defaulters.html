@@ -3,5 +3,5 @@
 {% block content %}
 <h3>Defaulters (below {{ config.ATTENDANCE_THRESHOLD }}%)</h3>
 <p class="text-muted">{{ rows|length }} of {{ total }} students are at risk.</p>
-{{ student_table(rows) }}
+{{ student_table(rows, true) }}
 {% endblock %}

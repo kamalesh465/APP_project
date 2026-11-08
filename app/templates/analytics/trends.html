@@ -26,9 +26,43 @@
 </div>
 
 <div class="card shadow-sm mb-3"><div class="card-body">
-  <h5>Attendance vs marks
+  <h5>Overall attendance vs marks
     {% if corr is not none %}<span class="badge bg-primary">Pearson r = {{ corr }}</span>{% endif %}</h5>
   {% if points %}<canvas id="scatter" height="100"></canvas>{% else %}<p class="text-muted">No data available.</p>{% endif %}
+</div></div>
+
+<div class="card shadow-sm mb-3"><div class="card-body">
+  <h5>Student attendance by subject</h5>
+  {% if subject_percentages %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover bg-white align-middle">
+      <thead class="table-dark"><tr><th>Student</th><th>Subject</th><th>Present</th>
+        <th>Total</th><th>Attendance</th><th>Below threshold</th></tr></thead>
+      <tbody>
+      {% for row in subject_percentages %}
+        <tr><td>{{ row.name }}</td><td>{{ row.subject }}</td>
+          <td>{{ row.present }}</td><td>{{ row.total }}</td>
+          <td>{{ row.percentage }}%</td>
+          <td>{{ "Yes" if row.below_threshold else "No" }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="text-muted">No subject attendance data available.</p>{% endif %}
+</div></div>
+
+<div class="card shadow-sm mb-3"><div class="card-body">
+  <h5>Subject-matched attendance vs marks
+    {% if subject_corr is not none %}
+    <span class="badge bg-primary">Pearson r = {{ subject_corr }}</span>
+    {% endif %}
+    <span class="badge bg-secondary">{{ subject_pair_count }} pairs</span>
+  </h5>
+  {% if subject_points %}
+  <canvas id="subject-scatter" height="100"></canvas>
+  {% endif %}
+  {% if subject_corr_reason %}<p class="text-muted mb-0">{{ subject_corr_reason }}</p>
+  {% elif not subject_points %}<p class="text-muted mb-0">No matching attendance and marks data.</p>{% endif %}
 </div></div>
 {% endblock %}
 
@@ -48,6 +82,19 @@ new Chart(document.getElementById("scatter"), {
   data: { datasets: [{ label: "Students", data: {{ points|tojson }}, backgroundColor: "#dc3545" }] },
   options: { scales: { x: { title: { display: true, text: "Attendance %" } },
                        y: { title: { display: true, text: "Average marks %" } } } }
+});
+{% endif %}
+{% if subject_points %}
+new Chart(document.getElementById("subject-scatter"), {
+  type: "scatter",
+  data: { datasets: [{ label: "Student-subject pairs", data: {{ subject_points|tojson }}, backgroundColor: "#198754" }] },
+  options: {
+    scales: { x: { title: { display: true, text: "Attendance %" } },
+              y: { title: { display: true, text: "Average marks %" } } },
+    plugins: { tooltip: { callbacks: {
+      label: context => `${context.raw.name} — ${context.raw.subject}: ${context.raw.x}% attendance, ${context.raw.y}% marks`
+    } } }
+  }
 });
 {% endif %}
 </script>

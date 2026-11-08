@@ -61,7 +61,32 @@ def student_percentages(df, threshold):
     return g[cols]
 
 
-def subject_percentages(df):
+def subject_percentages(df, threshold=None):
+    if threshold is not None:
+        cols = ["student_id", "roll_no", "name", "department", "subject_id",
+                "subject", "present", "total", "percentage", "below_threshold"]
+        if df.empty:
+            return pd.DataFrame(columns=cols)
+
+        group_cols = ["student_id", "subject_id"]
+        metadata_cols = [column for column in
+                         ("roll_no", "name", "department", "subject")
+                         if column in df.columns]
+        grouped = (df.groupby(group_cols, dropna=False)
+                   .agg(present=("present", "sum"),
+                        total=("present", "size"),
+                        **{column: (column, "first")
+                           for column in metadata_cols})
+                   .reset_index())
+        grouped["percentage"] = np.round(
+            grouped["present"] / grouped["total"] * 100, 2
+        )
+        grouped["below_threshold"] = grouped["percentage"] < threshold
+        for column in cols:
+            if column not in grouped:
+                grouped[column] = pd.NA
+        return grouped[cols]
+
     if df.empty:
         return pd.DataFrame(columns=["subject", "percentage"])
     s = df.groupby("subject")["present"].mean().mul(100).round(2).reset_index()
@@ -135,6 +160,61 @@ def attendance_marks_correlation(att_df, marks_df, threshold):
     points = [{"x": float(a), "y": float(b), "name": n}
               for a, b, n in zip(m["percentage"], m["score_pct"], m["name"])]
     return round(r, 3), points
+
+
+def subject_attendance_marks_correlation(attendance_df, marks_df):
+    """Correlate attendance and average marks for matching student-subject pairs."""
+    empty_reason = "No matching attendance and marks data."
+    if attendance_df.empty or marks_df.empty:
+        return None, 0, [], empty_reason
+
+    attendance = (attendance_df.groupby(["student_id", "subject_id"])
+                  .agg(attendance_pct=("present", "mean"),
+                       name=("name", "first"),
+                       subject=("subject", "first"))
+                  .reset_index())
+    attendance["attendance_pct"] *= 100
+
+    if {"score", "max_score"}.issubset(marks_df.columns):
+        scores = marks_df["score"].to_numpy(dtype=float)
+        maxima = marks_df["max_score"].to_numpy(dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            mark_pct = scores / maxima * 100
+        marks = marks_df[["student_id", "subject_id"]].copy()
+        marks["mark_pct"] = mark_pct
+    elif "score_pct" in marks_df.columns:
+        marks = marks_df[["student_id", "subject_id", "score_pct"]].rename(
+            columns={"score_pct": "mark_pct"}
+        )
+    else:
+        return None, 0, [], "Marks data has no score and max_score columns."
+
+    marks = marks[np.isfinite(marks["mark_pct"])]
+    marks = (marks.groupby(["student_id", "subject_id"])["mark_pct"]
+             .mean().reset_index())
+    pairs = attendance.merge(marks, on=["student_id", "subject_id"])
+    points = [
+        {"x": float(row["attendance_pct"]), "y": float(row["mark_pct"]),
+         "name": row["name"], "subject": row["subject"]}
+        for _, row in pairs.iterrows()
+    ]
+    n_pairs = len(points)
+    if n_pairs < 3:
+        return None, n_pairs, points, (
+            f"At least 3 matching student-subject pairs are required; found {n_pairs}."
+        )
+
+    x = pairs["attendance_pct"].to_numpy(dtype=float)
+    y = pairs["mark_pct"].to_numpy(dtype=float)
+    if np.ptp(x) == 0 or np.ptp(y) == 0:
+        return None, n_pairs, points, (
+            "Correlation is unavailable because attendance or marks have zero variance."
+        )
+
+    correlation = float(np.corrcoef(x, y)[0, 1])
+    if not np.isfinite(correlation):
+        return None, n_pairs, points, "Correlation could not be calculated from these pairs."
+    return round(correlation, 3), n_pairs, points, None
 
 
 # ---------------------------------------------------------- student level ---

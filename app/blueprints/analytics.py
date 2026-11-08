@@ -16,9 +16,17 @@ def invalidate_spark_cache():
 @bp.route("/defaulters")
 def defaulters():
     threshold = current_app.config["ATTENDANCE_THRESHOLD"]
-    pct = an.student_percentages(an.load_attendance_df(), threshold)
+    df = an.load_attendance_df()
+    pct = an.student_percentages(df, threshold)
     risk = pct[pct["status"] == "At Risk"].sort_values("percentage")
-    return render_template("analytics/defaulters.html", rows=risk.to_dict("records"),
+    subject_pct = an.subject_percentages(df, threshold)
+    below_subjects = (subject_pct[subject_pct["below_threshold"]]
+                      .groupby("student_id")["subject"].agg(list).to_dict()
+                      if not subject_pct.empty else {})
+    rows = risk.to_dict("records")
+    for row in rows:
+        row["below_subjects"] = below_subjects.get(row["student_id"], [])
+    return render_template("analytics/defaulters.html", rows=rows,
                            total=len(pct))
 
 
@@ -29,13 +37,23 @@ def trends():
     pct = an.student_percentages(df, threshold)
     labels, values = an.weekly_trend(df)
     direction, slope = an.trend_direction(values)
-    r, points = an.attendance_marks_correlation(df, an.load_marks_df(), threshold)
+    marks_df = an.load_marks_df()
+    r, points = an.attendance_marks_correlation(df, marks_df, threshold)
+    subject_pct = an.subject_percentages(df, threshold)
+    subject_corr, subject_pair_count, subject_points, subject_corr_reason = (
+        an.subject_attendance_marks_correlation(df, marks_df)
+    )
     return render_template("analytics/trends.html",
                            labels=labels, values=values,
                            direction=direction, slope=slope,
                            subjects=an.subject_percentages(df).to_dict("records"),
                            depts=an.department_percentages(df).to_dict("records"),
-                           stats=an.class_stats(pct), corr=r, points=points)
+                           stats=an.class_stats(pct), corr=r, points=points,
+                           subject_percentages=subject_pct.to_dict("records"),
+                           subject_corr=subject_corr,
+                           subject_pair_count=subject_pair_count,
+                           subject_points=subject_points,
+                           subject_corr_reason=subject_corr_reason)
 
 
 @bp.route("/spark", methods=["GET", "POST"])
