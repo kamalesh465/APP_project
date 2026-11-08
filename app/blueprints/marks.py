@@ -1,4 +1,7 @@
+import math
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import Student, Subject, Mark
@@ -16,8 +19,15 @@ def index():
 @bp.route("/add", methods=["GET", "POST"])
 def add():
     if request.method == "POST":
-        student = db.session.get(Student, int(request.form["student_id"]))
-        subject = db.session.get(Subject, int(request.form["subject_id"]))
+        try:
+            student_id = int(request.form.get("student_id", ""))
+            subject_id = int(request.form.get("subject_id", ""))
+        except (TypeError, ValueError):
+            flash("Select a valid student and subject.", "danger")
+            return redirect(url_for("marks.add"))
+
+        student = db.session.get(Student, student_id)
+        subject = db.session.get(Subject, subject_id)
         if student is None or subject is None:
             flash("Select a valid student and subject.", "danger")
             return redirect(url_for("marks.add"))
@@ -27,12 +37,29 @@ def add():
                   "danger")
             return redirect(url_for("marks.add", student_id=student.id))
 
-        db.session.add(Mark(student_id=int(request.form["student_id"]),
-                            subject_id=int(request.form["subject_id"]),
-                            exam_type=request.form["exam_type"].strip(),
-                            score=float(request.form["score"]),
-                            max_score=float(request.form["max_score"])))
-        db.session.commit()
+        try:
+            score = float(request.form.get("score", ""))
+            max_score = float(request.form.get("max_score", ""))
+        except (TypeError, ValueError):
+            flash("Enter numeric values for score and maximum score.", "danger")
+            return redirect(url_for("marks.add", student_id=student.id))
+        if (not math.isfinite(score) or not math.isfinite(max_score)
+                or max_score <= 0 or not 0 <= score <= max_score):
+            flash("Score must be between 0 and the maximum score, and maximum score must be greater than 0.",
+                  "danger")
+            return redirect(url_for("marks.add", student_id=student.id))
+
+        try:
+            db.session.add(Mark(student_id=student_id,
+                                subject_id=subject_id,
+                                exam_type=request.form.get("exam_type", "").strip(),
+                                score=score,
+                                max_score=max_score))
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("The mark could not be saved because of a database error.", "danger")
+            return redirect(url_for("marks.add", student_id=student.id))
         from .analytics import invalidate_spark_cache
         invalidate_spark_cache()
         flash("Mark recorded.", "success")

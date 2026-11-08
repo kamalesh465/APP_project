@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import DEPARTMENTS, Student, Mark
@@ -19,28 +20,36 @@ def list_students():
 
 def _save(student):
     department = request.form.get("department", "").strip()
-    if department not in DEPARTMENTS:
+    semester = request.form.get("semester", "")
+    if department not in DEPARTMENTS or semester not in {
+        str(value) for value in range(1, 9)
+    }:
         return False
     student.roll_no = request.form["roll_no"].strip()
     student.name = request.form["name"].strip()
     student.department = department
-    student.semester = int(request.form["semester"])
+    student.semester = int(semester)
     return True
 
 
 @bp.route("/add", methods=["GET", "POST"])
 def add():
     if request.method == "POST":
-        if Student.query.filter_by(roll_no=request.form["roll_no"].strip()).first():
-            flash("Roll number already exists.", "danger")
-        else:
-            s = Student()
-            if _save(s):
-                db.session.add(s)
-                db.session.commit()
-                flash("Student added.", "success")
-                return redirect(url_for("students.list_students"))
-            flash("Select a valid department.", "danger")
+        try:
+            if Student.query.filter_by(roll_no=request.form["roll_no"].strip()).first():
+                flash("Roll number already exists.", "danger")
+            else:
+                s = Student()
+                if _save(s):
+                    db.session.add(s)
+                    db.session.commit()
+                    flash("Student added.", "success")
+                    return redirect(url_for("students.list_students"))
+                flash("Select a valid department and semester (1 through 8).", "danger")
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Unable to add student")
+            flash("The student could not be added because of a database error.", "danger")
     return render_template("students/form.html", student=None,
                            departments=DEPARTMENTS)
 
@@ -49,20 +58,30 @@ def add():
 def edit(sid):
     s = db.get_or_404(Student, sid)
     if request.method == "POST":
-        if _save(s):
-            db.session.commit()
-            flash("Student updated.", "success")
-            return redirect(url_for("students.list_students"))
-        flash("Select a valid department.", "danger")
+        try:
+            if _save(s):
+                db.session.commit()
+                flash("Student updated.", "success")
+                return redirect(url_for("students.list_students"))
+            flash("Select a valid department and semester (1 through 8).", "danger")
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Unable to update student %s", sid)
+            flash("The student could not be updated because of a database error.", "danger")
     return render_template("students/form.html", student=s,
                            departments=DEPARTMENTS)
 
 
 @bp.route("/<int:sid>/delete", methods=["POST"])
 def delete(sid):
-    db.session.delete(db.get_or_404(Student, sid))
-    db.session.commit()
-    flash("Student deleted.", "info")
+    try:
+        db.session.delete(db.get_or_404(Student, sid))
+        db.session.commit()
+        flash("Student deleted.", "info")
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Unable to delete student %s", sid)
+        flash("The student could not be deleted because of a database error.", "danger")
     return redirect(url_for("students.list_students"))
 
 
